@@ -134,7 +134,6 @@ class Brain(object):
 
 
 def sarsa(if_random_init):
-    # p_list = []
     the_brain = Brain()
     the_cliff = Cliff()
     for i in range(MAX_EPISODES+1):
@@ -142,7 +141,6 @@ def sarsa(if_random_init):
             p = the_cliff.random_reset_cliff()
         else:
             p = the_cliff.reset_cliff()
-        # p_list.append(p)
         row = the_brain.map_p_to_row(the_cliff.current_p)
         a = the_brain.epsilon_greedy_action(row, 0)
         t = False
@@ -158,11 +156,8 @@ def sarsa(if_random_init):
         if i % 10000 == 0:
             print('Episode {0} end with reward:{1}'.format(i, r))
         if i % 100000 == 0:
-            with open(str(i)+'_Q_table_s.txt', 'w') as file:
+            with open('./sarsa/'+str(i)+'_Q_table_s.txt', 'w') as file:
                 file.write(str(the_brain.Q_table))
-            # with open(str(i)+'_p_list.txt', 'w') as file:
-            #     file.write(str(p_list))
-            # del p_list[:]
     print(the_brain.Q_table)
 
 
@@ -190,7 +185,7 @@ def expected_sarsa(if_random_init):
         if i % 10000 == 0:
             print('Episode {0} end with reward:{1}'.format(i, r))
         if i % 100000 == 0:
-            with open(str(i)+'_Q_table_es.txt', 'w') as file:
+            with open('./expected_sarsa/'+str(i)+'_Q_table_es.txt', 'w') as file:
                 file.write(str(the_brain.Q_table))
     print(the_brain.Q_table)
 
@@ -216,7 +211,7 @@ def q_learning(if_random_init):
         if i % 10000 == 0:
             print('Episode {0} end with reward:{1}'.format(i, r))
         if i % 100000 == 0:
-            with open(str(i)+'_Q_table_ql.txt', 'w') as file:
+            with open('./q_learning/'+str(i)+'_Q_table_ql.txt', 'w') as file:
                 file.write(str(the_brain.Q_table))
     print(the_brain.Q_table)
 
@@ -248,8 +243,8 @@ def double_q_learning(if_random_init):
 
 
 def main():
-    # sarsa(True)
-    # q_learning(True)
+    sarsa(True)
+    q_learning(True)
     expected_sarsa(True)
 
 
