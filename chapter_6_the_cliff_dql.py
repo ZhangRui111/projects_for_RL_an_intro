@@ -3,9 +3,10 @@ import random
 
 ALPHA = 0.2
 EPSILON = 0.4
-EPSILON_DECAY_LINE = 200000
+EPSILON_DECAY_LINE = 100000
 GAMMA = 0.9
-MAX_EPISODES = 1000000
+MAX_EPISODES = 500000
+TEST_EPISODES = 10
 
 
 class Cliff(object):
@@ -116,8 +117,8 @@ class Brain(object):
         """
         r = random.uniform(0, 1)
         epsilon = EPSILON
-        if episode % EPSILON_DECAY_LINE == 0 and epsilon > 0.1:
-            epsilon = epsilon/2
+        if episode % EPSILON_DECAY_LINE == 0 and episode != 0:
+            epsilon = max(0.1, epsilon / (episode // EPSILON_DECAY_LINE))
         if r < epsilon:
             action = np.random.random_integers(0, 3)
         else:
@@ -134,6 +135,7 @@ class Brain(object):
 
 
 def double_q_learning(if_random_init):
+    scores = []
     the_brain = Brain()
     the_cliff = Cliff()
     for i in range(MAX_EPISODES+1):
@@ -160,10 +162,31 @@ def double_q_learning(if_random_init):
             s = s_  # I have done this in Cliff.move(), so this line can be removed.
         if i % 10000 == 0:
             print('Episode {0} end with reward:{1}'.format(i, r))
+            scores.append(test_double_q_learning(the_cliff, the_brain))
         if i % 100000 == 0:
-            with open('./double_q_learning/'+str(i)+'_Q_table_dql.txt', 'w') as file:
+            with open('./logs/double_q_learning/'+str(i)+'_Q_table_dql.txt', 'w') as file:
                 file.write(str((the_brain.Q_table_1+the_brain.Q_table_2)/2))
+    with open('./logs/double_q_learning/scores_dql.txt', 'w') as file:
+        file.write(str(scores))
     print((the_brain.Q_table_1+the_brain.Q_table_2)/2)
+
+
+def test_double_q_learning(the_cliff, the_brain):
+    score = []
+    scores = []
+    for i in range(TEST_EPISODES):
+        p = the_cliff.reset_cliff()
+        t = the_cliff.terminal
+        s = the_cliff.current_p
+        while t is False:
+            row = the_brain.map_p_to_row(s)
+            a = the_brain.epsilon_greedy_action(row, 300000)
+            s, t, r, s_ = the_cliff.move(a)
+            score.append(r)
+            s = s_  # I have done this in Cliff.move(), so this line can be removed.
+        scores.append(sum(score))
+        score.clear()
+    return sum(scores) / len(scores)
 
 
 def main():

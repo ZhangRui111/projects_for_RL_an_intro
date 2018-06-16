@@ -3,9 +3,10 @@ import random
 
 ALPHA = 0.2
 EPSILON = 0.4
-EPSILON_DECAY_LINE = 200000
+EPSILON_DECAY_LINE = 100000
 GAMMA = 0.9
-MAX_EPISODES = 1000000
+MAX_EPISODES = 500000
+TEST_EPISODES = 10
 
 
 class Cliff(object):
@@ -115,8 +116,8 @@ class Brain(object):
         """
         r = random.uniform(0, 1)
         epsilon = EPSILON
-        if episode % EPSILON_DECAY_LINE == 0 and epsilon > 0.1:
-            epsilon = epsilon/2
+        if episode % EPSILON_DECAY_LINE == 0 and episode != 0:
+            epsilon = max(0.1, epsilon / (episode // EPSILON_DECAY_LINE))
         if r < epsilon:
             action = np.random.random_integers(0, 3)
         else:
@@ -134,6 +135,7 @@ class Brain(object):
 
 
 def sarsa(if_random_init):
+    scores = []
     the_brain = Brain()
     the_cliff = Cliff()
     for i in range(MAX_EPISODES+1):
@@ -155,13 +157,17 @@ def sarsa(if_random_init):
             a = a_
         if i % 10000 == 0:
             print('Episode {0} end with reward:{1}'.format(i, r))
+            scores.append(test_sarsa(the_cliff, the_brain))
         if i % 100000 == 0:
-            with open('./sarsa/'+str(i)+'_Q_table_s.txt', 'w') as file:
+            with open('./logs/sarsa/'+str(i)+'_Q_table_s.txt', 'w') as file:
                 file.write(str(the_brain.Q_table))
+    with open('./logs/sarsa/scores_s.txt', 'w') as file:
+        file.write(str(scores))
     print(the_brain.Q_table)
 
 
 def expected_sarsa(if_random_init):
+    scores = []
     the_brain = Brain()
     the_cliff = Cliff()
     for i in range(MAX_EPISODES+1):
@@ -184,13 +190,37 @@ def expected_sarsa(if_random_init):
             a = a_
         if i % 10000 == 0:
             print('Episode {0} end with reward:{1}'.format(i, r))
+            scores.append(test_sarsa(the_cliff, the_brain))
         if i % 100000 == 0:
-            with open('./expected_sarsa/'+str(i)+'_Q_table_es.txt', 'w') as file:
+            with open('./logs/expected_sarsa/'+str(i)+'_Q_table_es.txt', 'w') as file:
                 file.write(str(the_brain.Q_table))
+    with open('./logs/expected_sarsa/scores_es.txt', 'w') as file:
+        file.write(str(scores))
     print(the_brain.Q_table)
+
+
+def test_sarsa(the_cliff, the_brain):
+    score = []
+    scores = []
+    for i in range(TEST_EPISODES):
+        p = the_cliff.reset_cliff()
+        row = the_brain.map_p_to_row(the_cliff.current_p)
+        # epsilon-greedy with epsilon==0.1
+        a = the_brain.epsilon_greedy_action(row, EPSILON_DECAY_LINE*3)
+        t = False
+        while t is False:
+            s, t, r, s_ = the_cliff.move(a)
+            score.append(r)
+            row_ = the_brain.map_p_to_row(s_)
+            a_ = the_brain.epsilon_greedy_action(row_, i)
+            a = a_
+        scores.append(sum(score))
+        score.clear()
+    return sum(scores)/len(scores)
 
 
 def q_learning(if_random_init):
+    scores = []
     the_brain = Brain()
     the_cliff = Cliff()
     for i in range(MAX_EPISODES+1):
@@ -210,42 +240,37 @@ def q_learning(if_random_init):
             s = s_  # I have done this in Cliff.move(), so this line can be removed.
         if i % 10000 == 0:
             print('Episode {0} end with reward:{1}'.format(i, r))
+            scores.append(test_q_learning(the_cliff, the_brain))
         if i % 100000 == 0:
-            with open('./q_learning/'+str(i)+'_Q_table_ql.txt', 'w') as file:
+            with open('./logs/q_learning/'+str(i)+'_Q_table_ql.txt', 'w') as file:
                 file.write(str(the_brain.Q_table))
+    with open('./logs/q_learning/scores_ql.txt', 'w') as file:
+        file.write(str(scores))
     print(the_brain.Q_table)
 
 
-def double_q_learning(if_random_init):
-    the_brain = Brain()
-    the_cliff = Cliff()
-    for i in range(MAX_EPISODES+1):
-        if if_random_init:
-            p = the_cliff.random_reset_cliff()
-        else:
-            p = the_cliff.reset_cliff()
+def test_q_learning(the_cliff, the_brain):
+    score = []
+    scores = []
+    for i in range(TEST_EPISODES):
+        p = the_cliff.reset_cliff()
         t = the_cliff.terminal
         s = the_cliff.current_p
         while t is False:
             row = the_brain.map_p_to_row(s)
-            a = the_brain.epsilon_greedy_action(row, i)
+            a = the_brain.epsilon_greedy_action(row, 300000)
             s, t, r, s_ = the_cliff.move(a)
-            row_ = the_brain.map_p_to_row(s_)
-            TD_error = r + GAMMA * the_brain.Q_table[row_, :].max() - the_brain.Q_table[row, a]
-            the_brain.Q_table[row, a] = the_brain.Q_table[row, a] + ALPHA * TD_error
+            score.append(r)
             s = s_  # I have done this in Cliff.move(), so this line can be removed.
-        if i % 10000 == 0:
-            print('Episode {0} end with reward:{1}'.format(i, r))
-        if i % 100000 == 0:
-            with open(str(i)+'_Q_table_dql.txt', 'w') as file:
-                file.write(str(the_brain.Q_table))
-    print(the_brain.Q_table)
+        scores.append(sum(score))
+        score.clear()
+    return sum(scores) / len(scores)
 
 
 def main():
-    sarsa(True)
+    # sarsa(True)
     q_learning(True)
-    expected_sarsa(True)
+    # expected_sarsa(True)
 
 
 if __name__ == '__main__':
