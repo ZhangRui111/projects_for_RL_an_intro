@@ -6,7 +6,7 @@ EPSILON = 0.4
 EPSILON_DECAY_LINE = 100000
 GAMMA = 0.9
 MAX_EPISODES = 500000
-TEST_EPISODES = 10
+TEST_EPISODES = 20
 
 
 class Cliff(object):
@@ -112,13 +112,17 @@ class Brain(object):
         row = (current_p[0]-1)*6+(current_p[1]-1)
         return row
 
-    def epsilon_greedy_action(self, row, episode):
+    def epsilon_greedy_action(self, row, episode, if_set_epsilon, epsilon_value):
         """Epsilon greedy policy for selecting action.
         """
+        if if_set_epsilon:
+            epsilon = epsilon_value
+        else:
+            epsilon = EPSILON
+            if episode % EPSILON_DECAY_LINE == 0 and episode != 0:
+                epsilon = max(0.1, epsilon / (episode // EPSILON_DECAY_LINE))
+
         r = random.uniform(0, 1)
-        epsilon = EPSILON
-        if episode % EPSILON_DECAY_LINE == 0 and episode != 0:
-            epsilon = max(0.1, epsilon / (episode // EPSILON_DECAY_LINE))
         if r < epsilon:
             action = np.random.random_integers(0, 3)
         else:
@@ -147,7 +151,7 @@ def double_q_learning(if_random_init):
         s = the_cliff.current_p
         while t is False:
             row = the_brain.map_p_to_row(s)
-            a = the_brain.epsilon_greedy_action(row, i)
+            a = the_brain.epsilon_greedy_action(row, i, False, None)
             s, t, r, s_ = the_cliff.move(a)
             row_ = the_brain.map_p_to_row(s_)
             random_num = random.uniform(0, 1)
@@ -160,7 +164,12 @@ def double_q_learning(if_random_init):
                 TD_error = r + GAMMA * the_brain.Q_table_1[row_, select_action_s_] - the_brain.Q_table_2[row, a]
                 the_brain.Q_table_2[row, a] = the_brain.Q_table_2[row, a] + ALPHA * TD_error
             s = s_  # I have done this in Cliff.move(), so this line can be removed.
-        if i % 10000 == 0:
+        if i <= 10000 and i % 10 == 0:
+            scores.append(test_double_q_learning(the_cliff, the_brain))
+            if i == 10000:
+                with open('./logs/double_q_learning/scores_dql_10000.txt', 'w') as file:
+                    file.write(str(scores))
+        if i > 10000 and i % 1000 == 0:
             print('Episode {0} end with reward:{1}'.format(i, r))
             scores.append(test_double_q_learning(the_cliff, the_brain))
         if i % 100000 == 0:
@@ -180,7 +189,7 @@ def test_double_q_learning(the_cliff, the_brain):
         s = the_cliff.current_p
         while t is False:
             row = the_brain.map_p_to_row(s)
-            a = the_brain.epsilon_greedy_action(row, 300000)
+            a = the_brain.epsilon_greedy_action(row, None, True, 0.05)
             s, t, r, s_ = the_cliff.move(a)
             score.append(r)
             s = s_  # I have done this in Cliff.move(), so this line can be removed.
