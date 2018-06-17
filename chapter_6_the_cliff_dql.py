@@ -178,6 +178,7 @@ def double_q_learning(if_random_init):
             if i == 10000:
                 with open(LOGS_PATH_DQL+'scores_dql_10000.txt', 'w') as file:
                     file.write(str(scores))
+            scores.clear()
         if i > 10000 and i % RECORD_EPISODES_LARGE == 0:
             print('Episode {0} end with reward:{1}'.format(i, r))
             scores.append(test_double_q_learning(the_cliff, the_brain))
